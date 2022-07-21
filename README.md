@@ -32,7 +32,7 @@ $track({
 ```
     {
       "eventId": "110001",
-      "params": {
+      "param": {
           "isSavePwd": 1,
           "status": "在线"
       },
