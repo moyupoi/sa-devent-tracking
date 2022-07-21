@@ -14,16 +14,9 @@ import { $saInit } from 'sa-event-tracking'
 
 ##### 初始化加载脚本:
 ```js
-// 获取用户信息
-const { siteId, userId, username } = loginUserProxy();
-// 调用初始化埋点函数
-// isFetch 是模拟请求 true || false
-$saInit({
-    siteId,
-    userId,
-    username,
-    clientVersion: version,
-}, 10000, isFetch); // (初始化参数, 上报间隔时间)
+  // 调用初始化埋点函数
+  const getURL = '上报接口地址'
+  $saInit(getURL, 10000);
 ```
 
 ##### 开始埋点:
@@ -31,25 +24,25 @@ $saInit({
 import { $track } from 'sa-event-tracking'
 $track({
     eventId: "10110",
-    param: "{}"
+    param: {}
 })
 ```
 
 ##### 参数说明:
 ```
-{
-    "defaults": {       
-        "siteId": "kf_90001",
-        "userId": "用户ID",
-        "username": "用户名称",
-        "clientVersion": "项目版本号",
-        "electronVersion": "electron版本号",
-    },
-    "event": {
-        "timestamp": "毫秒数",
-        "eventId": "10110",
-        "param": "{}"
+    {
+      "eventId": "110001",
+      "params": {
+          "isSavePwd": 1,
+          "status": "在线"
+      },
+      "timestamp": 1658372690231,
+      "userid": "uxy_1000_caed14f1-9b8d-4475-a688-55792a49ab5a",
+      "siteid": "uxy_1000",
+      "userName": "lcc",
+      "electronVersion": "",
+      "clientVersion": "9.9.1",
+      "username": "lcc"
     }
-}
 ```
 ###### 更多配置参考: github.com/moyupoi/sa-devent-tracking
