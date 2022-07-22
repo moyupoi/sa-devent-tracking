@@ -37,12 +37,12 @@ $track({
           "status": "在线"
       },
       "timestamp": 1658372690231,
-      "userid": "uxy_1000_caed14f1-9b8d-4475-a688-55792a49ab5a",
-      "siteid": "uxy_1000",
-      "userName": "lcc",
+      "userid": "uxy_xxx_xxxxxx",
+      "siteid": "uxy_xxx",
+      "userName": "name",
       "electronVersion": "",
       "clientVersion": "9.9.1",
-      "username": "lcc"
+      "username": "name"
     }
 ```
 ###### 更多配置参考: github.com/moyupoi/sa-devent-tracking

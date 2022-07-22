@@ -1,4 +1,5 @@
 import { $initDBbase, $removeDBbase, $readDBbase, $addDBbase, $updateDBbase, $getAllDBbase, $clearDBbase, $deleteDBbase, $readIndexDBbase } from './indexDB';
+import { moyuLog } from './moyulog';
 // 数据库名称
 const DATA_BASE_NAME = 'saTrackDBbase';
 const LOCAL_STORAGE_NAME = 'saTempData';
@@ -23,7 +24,7 @@ export const $saInit = (url, interval = 10000) => {
         CLIENT_URL = url;
         // 打开数据库
         $initDBbase(DATA_BASE_NAME, true, 1, db => {
-            console.log('埋点...初始化完成...');
+            moyuLog({ text: '埋点...初始化完成！', color: '#04c160' });
             // 开始执行轮询
             initSetInterval(interval);
         });
@@ -44,9 +45,9 @@ export const $track = event => {
         };
         $addDBbase(DATA_BASE_NAME, data).then(res => {
             if (res) {
-                console.log('埋点...点击埋点成功！', res);
+                moyuLog({ text: '埋点...事件埋点成功!', color: '#04c160', data: res });
             } else {
-                console.log('埋点...点击埋点失败！');
+                moyuLog({ text: '埋点...事件埋点失败...', color: '#d16770' });
             };
         });
     } else {
@@ -62,7 +63,7 @@ const initSetInterval = interval => {
         const { siteid } = defaultInfoData;
         $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, data => {
             if (data && data.length > 0) {
-                console.log('埋点...索引读取成功...', data);
+                moyuLog({ text: '埋点...索引读取成功！', color: '#04c160', data });
                 fetchEscalation(data, false);
             }
         });
@@ -79,18 +80,18 @@ const fetchEscalation = (data, isLocalStorage = false) => {
         headers: { 'Content-Type': 'application/json' },
     }).then(res => res.json()).then(res => {
         if (res && res.code === 200) {
-            console.log('埋点...数据请求成功...');
+            moyuLog({ text: '埋点...数据请求成功！', color: '#04c160' });
             if (isLocalStorage) {
                 // 销毁Storage中的数据
                 localStorage.removeItem(LOCAL_STORAGE_NAME);
-                console.log('埋点...销毁Storage中数据成功...')
+                moyuLog({ text: '埋点...销毁Storage中数据成功！', color: '#04c160' });
             } else {
                 // 销毁indexDB中的数据
                 saDataDestroy();
             }
         } else {
             data = JSON.stringify(data);
-            console.log(`埋点...销毁indexDB数据未成功...数据为${data}`);
+            moyuLog({ text: '埋点...销毁indexDB数据未成功...数据为', color: '#d16770', data });
         }
     });
 };
@@ -115,7 +116,7 @@ const setTemporaryStorage = event => {
 // 销毁数据库存的埋点
 const saDataDestroy = () => {
     $clearDBbase(DATA_BASE_NAME);
-    console.log('埋点...indexDB中的数据销毁完毕...');
+    moyuLog({ text: '埋点...indexDB中的数据销毁完毕!', color: '#04c160' });
 };
 
 const isJSONString = params => {
@@ -156,7 +157,7 @@ const reportTemporaryData = () => {
             recordArray.map(item => Object.assign(item, defaultInfoData));
             // 上报埋点
             fetchEscalation(recordArray, true);
-            console.log('埋点...上报storage中临时数据...');
+            moyuLog({ text: '埋点...上报storage中临时数据完成!', color: '#04c160' });
         };
     };
 };
