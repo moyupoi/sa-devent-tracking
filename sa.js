@@ -352,11 +352,7 @@ const collectErrLogReport = () => {
             color: '#d16770',
             data,
         });
-
-        fetchEscalation(
-            data,
-            false,
-        );
+        $track(data);
     };
 };
 
