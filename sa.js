@@ -25,7 +25,7 @@ let localStorage = window.localStorage;
 
 // 埋点初始化函数
 export const $saInit = (url, interval = 10000) => {
-    if (initStart) {
+    if (url && url !== '' && initStart) {
         // 防止重复调用
         initStart = false;
         // 赋值URL
