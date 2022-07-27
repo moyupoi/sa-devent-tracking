@@ -179,6 +179,10 @@ export const $initializationDetection = () => {
     } catch (e) {};
 };
 
+export const $saReset = () => {
+    initStart = false;
+}
+
 // 轮询函数
 const initSetInterval = interval => {
     // 轮询 调接口pull数据
