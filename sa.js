@@ -356,8 +356,29 @@ const collectErrLogReport = () => {
             color: '#d16770',
             data,
         });
-        $track(data);
-    };
+
+        const { siteid } = defaultInfoData;
+        $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, dbase => {
+            let dbaseMap = dbase.filter(item => item.eventId === '100098');
+            // 默认重复
+            let isRepeat = false;
+            if (dbaseMap && dbaseMap.length > 0) {
+                dbaseMap.map(item => {
+                    if (item.eventId === '100098' && item.param && item.param.msg === msg) {
+                        // 重复了，并且更新
+                        let frequency = item.frequency ? item.frequency + 1 : 1;
+                        $updateDBbase(DATA_BASE_NAME, {...item, frequency});
+                    } else {
+                        // 不重复
+                        isRepeat = true;
+                    }
+                })
+                if (isRepeat) $track(data);
+            } else {
+              $track(data);
+            }
+        })
+    }
 };
 
 const clip = num => num.toString().replace(/(?<=\.\d{2}).*$/, '');
