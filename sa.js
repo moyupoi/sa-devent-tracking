@@ -339,6 +339,12 @@ const collectErrLogReport = () => {
             }
             errorText = ext.join(',');
         };
+        if (msg.indexOf("'")) {
+          msg = msg.replace(/'/g, '"');
+        }
+        if (errorText.indexOf("'")) {
+          errorText = errorText.replace(/'/g, '"');
+        }
         const data = {
             eventId: '100098',
             system: saSystem,
