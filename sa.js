@@ -467,7 +467,7 @@ export const $CPUEfficiency = (delay = 1000, callback) => {
         let stepPer = getStepPer(Date.now(), per);
         let cpuNumber = Math.round(stepPer * 100);
         if (cpuNumber) {
-            callback(`${cpuNumber}%`);
+            callback(cpuNumber);
         }
     }, delay);
 };
@@ -499,10 +499,7 @@ const getStepPer = (time, per) => {
         data.per_line.shift();
         data.time_line.shift();
     }
-    if (result >= 100) {
-        result = 100
-    }
-    return result;
+    return result >= 1 ? 1 : result;
 };
 
 // 获取实时帧率
@@ -525,4 +522,43 @@ export const $FPSEfficiency = (callback) => {
         window.requestAnimationFrame(loop);
     }
     loop();
+}
+
+/**
+    压力测试: 给予电脑性能压力
+    pressure: 创建dom数，一般电脑不要超过400
+*/
+export const $performancePressureTest = (pressure = 100) => {
+    document.body.style.overflow = 'hidden';
+    for (let i = 0; i < pressure; i++) {
+        let div = document.createElement('div');
+        div.className = 'mover';
+        div.style.background = '#fff';
+        div.style.width = '200px';
+        div.style.height = '170px';
+        div.style.pointerEvents = 'none';
+        div.style.opacity = 0.1;
+        div.style.position = 'absolute';
+        div.style.zIndex = '999';
+        document.body.appendChild(div);
+    }
+
+    let fanFlies = (function() {
+        return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function(callback) {
+            window.setTimeout(callback, 1000 / 60);
+        };
+    })();
+    let movers = document.querySelectorAll('.mover');
+    (function init() {
+        for (let m = 0; m < movers.length; m++) {
+            movers[m].style.top = (m * 20) + 'px';
+        }
+    })();
+    function update(timestamp) {
+        for (let m = 0; m < movers.length; m++) {
+            movers[m].style.left = ((Math.sin(movers[m].offsetTop + timestamp / 1000) + 1) * 500) + 'px';
+        }
+        fanFlies(update);
+    };
+    fanFlies(update);
 }
