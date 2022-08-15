@@ -442,3 +442,87 @@ const isAllowReporting = eventId => {
 
     return result;
 };
+
+// 实时监控cpu运行效率
+let delay = 1000;
+let data = {
+    per_line: [], //记录每个点对应的cpu开销
+    time_line: [], //没个点的时间坐标记录下来
+    averageTime: delay, //如果cpu一直是0%，那就是200ms打一个点
+    totalSize: 0, //从启动到现在累计的总开销
+};
+export const $CPUEfficiency = (delay = 1000, callback) => {
+    let lastTime = Date.now();
+    delay = delay;
+    data.averageTime = delay;
+    customizeSetInterval(requestAnimationFrameID => {
+        let per = (Date.now() - lastTime - delay - 0) / delay;
+        if (per < 0) {
+            per = 0;
+        }
+        if (per > 1) {
+            per = 1;
+        }
+        lastTime = Date.now();
+        let stepPer = getStepPer(Date.now(), per);
+        let cpuNumber = Math.round(stepPer * 100);
+        if (cpuNumber) {
+            callback(`${cpuNumber}%`);
+        }
+    }, delay);
+};
+
+/**
+ * 计算当前的实际百分比，然后限制在最高100%的时候需要补画多少个点，确保面积不受影响
+ * @param {Number} time 当前这个点的时间
+ * @param {Number} per  当前的CPU百分比
+ */
+const getStepPer = (time, per) => {
+    data.time_line.push(time);
+    let cd;
+    data.per_line.push(per);
+    let len = data.time_line.length;
+    if (data.time_line.length == 1) {
+        cd = data.averageTime;
+    } else {
+        cd = time - data.time_line[len - 2];
+    }
+    if (cd < data.averageTime) {
+        cd = data.averageTime;
+    }
+    let result = (cd - data.averageTime) / data.averageTime;
+    if (len >= 2) {
+        data.totalSize += ((data.per_line[len - 1] + data.per_line[len - 2]) * (data.time_line[len - 1] - data.time_line[len - 2])) / 2;
+    }
+    if (data.per_line.length > 2) {
+        //省内存，最多保存两个值
+        data.per_line.shift();
+        data.time_line.shift();
+    }
+    if (result >= 100) {
+        result = 100
+    }
+    return result;
+};
+
+// 获取实时帧率
+export const $FPSEfficiency = (callback) => {
+    let lastTime = performance.now();
+    let frame = 0;
+    let lastFameTime = performance.now();
+    let loop = (time) => {
+        let now =  performance.now();
+        let fs = (now - lastFameTime);
+        lastFameTime = now;
+        let fps = Math.round(1000/fs);
+        frame++;
+        if (now > 1000 + lastTime) {
+            let fps = Math.round( ( frame * 1000 ) / ( now - lastTime ) );
+            frame = 0;
+            lastTime = now;
+            callback(fps);
+        };
+        window.requestAnimationFrame(loop);
+    }
+    loop();
+}
