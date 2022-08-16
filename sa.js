@@ -628,6 +628,7 @@ export const $interfaceDuration = (type = 'fetch', interval = 5000, overtime = 1
                     color: '#04c160',
                     data: interfaceData,
                 });
+                interfaceData = [];
             }
         }
     }, interval);
