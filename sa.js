@@ -562,3 +562,73 @@ export const $performancePressureTest = (pressure = 100) => {
     };
     fanFlies(update);
 }
+
+/**
+    获取请求时长
+    type:     fetch | script | css | xmlhttprequest | img | link
+    interval: 轮询时长
+    overtime: 超时多少开始记录
+*/
+let interfaceData = []; // 全局存储接口数据
+let interfaceCount = 0; // 超过计数限额则提交埋点数据倒indexDB
+export const $interfaceDuration = (type = 'fetch', interval = 5000, overtime = 100) => {
+    customizeSetInterval(requestAnimationFrameID => {
+        let resource = performance.getEntriesByType('resource');
+        if (resource && resource.length > 0) {
+            let obj = {};
+            resource = resource.reduce((cur, next) => {
+                // 当超时时间大于 overtime
+                if (next.duration > overtime && next.initiatorType === type) {
+                    // 已经存在
+                    if (!obj[next.name]) {
+                        obj[next.name] = cur.push({
+                            // 资源的名称
+                            name: next.name,
+                            // 资源加载耗时
+                            duration: Math.round(next.duration),
+                            // 资源大小
+                            transferSize: next.transferSize,
+                            // 资源所用协议
+                            protocol: next.nextHopProtocol,
+                        });
+                    } else {
+                        cur.map(item => {
+                            if (item.name === next.name && item.duration > next.duration) {
+                                item.duration = next.duration
+                                item.transferSize = next.transferSize
+                            }
+                        })
+                    }
+                }
+                return cur;
+            }, []);
+
+            if (interfaceData && interfaceData.length > 0) {
+                resource.map(item => {
+                    let dataIndex = interfaceData.findIndex(ftem => ftem.name === item.name);
+                    if (dataIndex !== -1) {
+                        if (interfaceData[dataIndex].duration > item.duration) {
+                            interfaceData[dataIndex].duration = item.duration;
+                            interfaceData[dataIndex].transferSize = item.transferSize;
+                        }
+                    } else {
+                        interfaceData.push(item);
+                    }
+                });
+            } else {
+                interfaceData = resource
+            }
+
+            interfaceCount++;
+
+            if (interfaceCount >= 10) {
+                interfaceCount = 0;
+                moyuLog({
+                    text: '埋点...请求接口数据',
+                    color: '#04c160',
+                    data: interfaceData,
+                });
+            }
+        }
+    }, interval);
+}
