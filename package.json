@@ -1,6 +1,6 @@
 {
   "name": "sa-event-tracking",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "devent-tracking",
   "main": "sa.js",
   "scripts": {

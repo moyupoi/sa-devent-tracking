@@ -571,14 +571,14 @@ export const $performancePressureTest = (pressure = 100) => {
 */
 let interfaceData = []; // 全局存储接口数据
 let interfaceCount = 0; // 超过计数限额则提交埋点数据倒indexDB
-export const $interfaceDuration = (type = 'fetch', interval = 5000, overtime = 100) => {
+export const $interfaceDuration = (type = ['fetch'], interval = 5000, overtime = 100, callback) => {
     customizeSetInterval(requestAnimationFrameID => {
         let resource = performance.getEntriesByType('resource');
         if (resource && resource.length > 0) {
             let obj = {};
             resource = resource.reduce((cur, next) => {
                 // 当超时时间大于 overtime
-                if (next.duration > overtime && next.initiatorType === type) {
+                if (next.duration > overtime && type.includes(next.initiatorType)) {
                     // 已经存在
                     if (!obj[next.name]) {
                         obj[next.name] = cur.push({
@@ -620,7 +620,6 @@ export const $interfaceDuration = (type = 'fetch', interval = 5000, overtime = 1
             }
 
             interfaceCount++;
-
             if (interfaceCount >= 10) {
                 interfaceCount = 0;
                 moyuLog({
@@ -628,7 +627,7 @@ export const $interfaceDuration = (type = 'fetch', interval = 5000, overtime = 1
                     color: '#04c160',
                     data: interfaceData,
                 });
-                interfaceData = [];
+                callback(interfaceData);
             }
         }
     }, interval);
