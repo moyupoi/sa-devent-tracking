@@ -571,7 +571,7 @@ export const $performancePressureTest = (pressure = 100) => {
 */
 let interfaceData = []; // 全局存储接口数据
 let interfaceCount = 0; // 超过计数限额则提交埋点数据倒indexDB
-export const $interfaceDuration = (type = ['fetch'], interval = 5000, overtime = 100, callback) => {
+export const $interfaceDuration = (type = ['fetch'], interval = 60000, overtime = 100, frequency = 10, callback) => {
     customizeSetInterval(requestAnimationFrameID => {
         let resource = performance.getEntriesByType('resource');
         if (resource && resource.length > 0) {
@@ -589,13 +589,16 @@ export const $interfaceDuration = (type = ['fetch'], interval = 5000, overtime =
                             // 资源大小
                             transferSize: next.transferSize,
                             // 资源所用协议
-                            protocol: next.nextHopProtocol,
+                            // protocol: next.nextHopProtocol,
+                            // 次数
+                            count: 1,
                         });
                     } else {
                         cur.map(item => {
                             if (item.name === next.name && item.duration > next.duration) {
                                 item.duration = next.duration
                                 item.transferSize = next.transferSize
+                                item.count = item.count + 1
                             }
                         })
                     }
@@ -620,7 +623,9 @@ export const $interfaceDuration = (type = ['fetch'], interval = 5000, overtime =
             }
 
             interfaceCount++;
-            if (interfaceCount >= 10) {
+            // 清除缓冲器
+            performance.clearResourceTimings();
+            if (interfaceCount >= frequency) {
                 interfaceCount = 0;
                 moyuLog({
                     text: '埋点...请求接口数据',
@@ -630,5 +635,67 @@ export const $interfaceDuration = (type = ['fetch'], interval = 5000, overtime =
                 callback(interfaceData);
             }
         }
+
+        // // 组件diff时长记录
+        // if (renderDurationData && renderDurationData.length > 0) {
+        //     const { siteid } = defaultInfoData;
+        //     $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, dbase => {
+        //         let dbaseMap = dbase.filter(item => item.eventId === '110073');
+        //         if (dbaseMap && dbaseMap.length > 0) {
+        //             dbaseMap.map(item => {
+        //                 if (item && item.param && item.param.renderDurationData && item.param.renderDurationData.length > 0) {
+        //                     renderDurationData = [...renderDurationData, ...item.param.renderDurationData];
+        //                 }
+        //
+        //                 let obj = {};
+        //                 renderDurationData = renderDurationData.reduce((cur, next) => {
+        //                     if (!obj[next.name]) {
+        //                         obj[next.name] = cur.push({
+        //                             name: next.name,
+        //                             type: next.type,
+        //                             diff: next.diff,
+        //                         })
+        //                     } else {
+        //                         cur.map(item => {
+        //                             if (item.name === next.name && item.type === next.type) {
+        //                                 item.diff = [...item.diff, ...next.diff];
+        //                             }
+        //                         })
+        //                     }
+        //                     return cur;
+        //                 }, []);
+        //                 $updateDBbase(DATA_BASE_NAME, { ...item, param: { renderDurationData }});
+        //             });
+        //         } else {
+        //             $track({
+        //                 eventId: '110073',
+        //                 param: {
+        //                     renderDurationData,
+        //                 },
+        //             });
+        //         }
+        //     });
+        // }
     }, interval);
 }
+
+// 组件diff时长记录
+// let renderDurationData = [];
+// export const $renderDuration = (name, type, time = Date.now()) => {
+//     if (renderDurationData.length > 0 && renderDurationData.filter(item => item.name === name && item.type === type).length > 0) {
+//         renderDurationData.map(item => {
+//             if (item.name === name && item.type === type) {
+//                 let temp = time - item.time;
+//                 item.diff.push(temp);
+//                 item.time = time;
+//             }
+//         });
+//     } else {
+//         renderDurationData.push({ name, time, type, diff: [] });
+//     }
+//     // moyuLog({
+//     //     text: '埋点...组件执行时间',
+//     //     color: '#04c160',
+//     //     data: renderDurationData,
+//     // });
+// }
