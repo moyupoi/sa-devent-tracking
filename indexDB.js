@@ -205,7 +205,7 @@ const isNUll = dbName => {
     if (!db) return false
     const transaction = db.transaction([dbName], 'readwrite')
     if (!transaction) return false
-    const objectStore = tn.objectStore(dbName)
+    const objectStore = transaction.objectStore(dbName)
     if (!objectStore) return false
     return true
 }
