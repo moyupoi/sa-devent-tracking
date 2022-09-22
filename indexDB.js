@@ -43,7 +43,7 @@ export const $initDBbase = (dbName, autoIncrement = true, version, callback) => 
 */
 export const $addDBbase = (dbName, data, res) => {
   return new Promise((resolve, reject) => {
-    if (!db) return
+    if (!isNUll(dbName)) return
     let request = db.transaction([dbName], 'readwrite').objectStore(dbName).add(data)
     request.onsuccess = event => {
       // console.log('数据写入成功!')
@@ -81,7 +81,7 @@ export const $addDBbase = (dbName, data, res) => {
   * {String} data     需要更新的数据
 */
 export const $updateDBbase = (dbName, data) => {
-  if (!db) return
+  if (!isNUll(dbName)) return
   let request = db.transaction([dbName], 'readwrite').objectStore(dbName).put(data)
   request.onsuccess = event => {
     // console.log('数据更新成功!')
@@ -99,7 +99,7 @@ export const $updateDBbase = (dbName, data) => {
   * {String} data     需要读取的数据
 */
 export const $readDBbase = (dbName, id, callback) => {
-  if (!db) return
+  if (!isNUll(dbName)) return
   let request = db.transaction([dbName]).objectStore(dbName).get(id)
   request.onerror = event => {
     // console.log('事务失败...')
@@ -122,7 +122,7 @@ export const $readDBbase = (dbName, id, callback) => {
   * {String} data     需要读取的数据
 */
 export const $readIndexDBbase = (dbName, index, value, callback) => {
-  if (!db) return
+  if (!isNUll(dbName)) return
   let request = db.transaction([dbName]).objectStore(dbName).index(index).getAll(value)
   request.onerror = event => {
     // console.log('事务失败...')
@@ -143,7 +143,7 @@ export const $readIndexDBbase = (dbName, index, value, callback) => {
   * {String} dbName   数据库名称
 */
 export const $getAllDBbase = dbName => {
-  if (!db) return
+  if (!isNUll(dbName)) return
   let request = db.transaction([dbName], 'readwrite').objectStore(dbName).getAll()
   request.onsuccess = event => {
     if (event.target && event.target.result && event.target.result.length > 0) {
@@ -162,7 +162,7 @@ export const $getAllDBbase = dbName => {
   * {String} id       索引键
 */
 export const $removeDBbase = (dbName, id) => {
-  if (!db) return
+  if (!isNUll(dbName)) return
   let request = db.transaction([dbName], 'readwrite').objectStore(dbName).delete(id)
   request.onsuccess = event => {
     // console.log('数据删除成功!')
@@ -196,6 +196,16 @@ export const $deleteDBbase = dbName => {
   * {String} dbName   数据库名称
 */
 export const $clearDBbase = dbName => {
-  if (!db) return
+  if (!isNUll(dbName)) return
   db.transaction([dbName], 'readwrite').objectStore(dbName).clear()
+}
+
+// 判断数据库是否为空
+const isNUll = dbName => {
+    if (!db) return false
+    const transaction = db.transaction([dbName], 'readwrite')
+    if (!transaction) return false
+    const objectStore = tn.objectStore(dbName)
+    if (!objectStore) return false
+    return true
 }
