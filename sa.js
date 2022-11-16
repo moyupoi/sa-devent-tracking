@@ -229,42 +229,55 @@ const initSetInterval = interval => {
     }, interval);
 };
 
+const unrepeated = (arr) => {
+    let hash = {};
+    return arr.reduce((accum, item) => {
+        hash[item['timestamp']] ? '' : (hash[item['timestamp']] = true && accum.push(item));
+        return accum;
+    }, []);
+}
+
 // 请求接口上报数据
 const fetchEscalation = (data, isLocalStorage = false) => {
-    fetch(CLIENT_URL, {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-        .then(res => res.json())
-        .then(res => {
-            if (res && res.code === 200) {
-                moyuLog({
-                    text: '埋点...数据请求成功！',
-                    color: '#04c160',
-                });
-                if (isLocalStorage) {
-                    // 销毁Storage中的数据
-                    localStorage.removeItem(LOCAL_STORAGE_NAME);
+    try {
+        if (data && data.length > 0) {
+            data = unrepeated(data);
+        }
+        fetch(CLIENT_URL, {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(res => res.json())
+            .then(res => {
+                if (res && res.code === 200) {
                     moyuLog({
-                        text: '埋点...销毁Storage中数据成功！',
+                        text: '埋点...数据请求成功！',
                         color: '#04c160',
                     });
+                    if (isLocalStorage) {
+                        // 销毁Storage中的数据
+                        localStorage.removeItem(LOCAL_STORAGE_NAME);
+                        moyuLog({
+                            text: '埋点...销毁Storage中数据成功！',
+                            color: '#04c160',
+                        });
+                    } else {
+                        // 销毁indexDB中的数据
+                        saDataDestroy();
+                    }
                 } else {
-                    // 销毁indexDB中的数据
-                    saDataDestroy();
+                    data = JSON.stringify(data);
+                    moyuLog({
+                        text: '埋点...销毁indexDB数据未成功...数据为',
+                        color: '#d16770',
+                        data,
+                    });
                 }
-            } else {
-                data = JSON.stringify(data);
-                moyuLog({
-                    text: '埋点...销毁indexDB数据未成功...数据为',
-                    color: '#d16770',
-                    data,
-                });
-            }
-        });
+            });
+    } catch (e) {}
 };
 
 // 没有初始化时把埋点放到localStorage中
@@ -279,11 +292,11 @@ const setTemporaryStorage = event => {
         if (record && record.length > 0) {
             record.push(event);
             record = JSON.stringify(record);
-            localStorage.setItem(LOCAL_STORAGE_NAME, record);
+            $localstorageISExcess(LOCAL_STORAGE_NAME, record);
         }
     } else {
         event = JSON.stringify([event]);
-        localStorage.setItem(LOCAL_STORAGE_NAME, event);
+        $localstorageISExcess(LOCAL_STORAGE_NAME, event);
     }
 };
 
@@ -345,71 +358,73 @@ const reportTemporaryData = () => {
 // 获取错误日志
 const collectErrLogReport = () => {
     window.onerror = (msg, url, line, col, error) => {
-        let errorText = '';
-        if (error && error.stack) {
-            // 如果浏览器有堆栈信息，直接使用
-            errorText = error.stack.toString();
-        } else if (arguments.callee) {
-            // 尝试通过callee拿堆栈信息
-            let ext = [];
-            let fn = arguments.callee.caller;
-            // 这里只拿三层堆栈信息
-            let floor = 3;
-            while (fn && --floor > 0) {
-                ext.push(fn.toString());
-                if (fn === fn.caller) {
-                    // 如果有环
-                    break;
-                }
-                fn = fn.caller;
-            }
-            errorText = ext.join(',');
-        }
-        if (msg.indexOf("'")) {
-            msg = msg.replace(/'/g, '"');
-        }
-        if (errorText.indexOf("'")) {
-            errorText = errorText.replace(/'/g, '"');
-        }
-        const data = {
-            eventId: '100098',
-            system: saSystem,
-            ...defaultInfoData,
-            param: {
-                msg,
-                url,
-                line,
-                col,
-                errorText,
-            },
-        };
-        moyuLog({
-            text: '埋点...发现一条崩溃错误...',
-            color: '#d16770',
-            data,
-        });
+        try {
+          let errorText = '';
+          if (error && error.stack) {
+              // 如果浏览器有堆栈信息，直接使用
+              errorText = error.stack.toString();
+          } else if (arguments.callee) {
+              // 尝试通过callee拿堆栈信息
+              let ext = [];
+              let fn = arguments.callee.caller;
+              // 这里只拿三层堆栈信息
+              let floor = 3;
+              while (fn && --floor > 0) {
+                  ext.push(fn.toString());
+                  if (fn === fn.caller) {
+                      // 如果有环
+                      break;
+                  }
+                  fn = fn.caller;
+              }
+              errorText = ext.join(',');
+          }
+          if (msg.indexOf("'")) {
+              msg = msg.replace(/'/g, '"');
+          }
+          if (errorText.indexOf("'")) {
+              errorText = errorText.replace(/'/g, '"');
+          }
+          const data = {
+              eventId: '100098',
+              system: saSystem,
+              ...defaultInfoData,
+              param: {
+                  msg,
+                  url,
+                  line,
+                  col,
+                  errorText,
+              },
+          };
+          moyuLog({
+              text: '埋点...发现一条崩溃错误...',
+              color: '#d16770',
+              data,
+          });
 
-        const { siteid } = defaultInfoData;
-        $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, dbase => {
-            let dbaseMap = dbase.filter(item => item.eventId === '100098');
-            // 默认重复
-            let isRepeat = false;
-            if (dbaseMap && dbaseMap.length > 0) {
-                dbaseMap.map(item => {
-                    if (item.eventId === '100098' && item.param && item.param.msg === msg) {
-                        // 重复了，并且更新
-                        let frequency = item.frequency ? item.frequency + 1 : 1;
-                        $updateDBbase(DATA_BASE_NAME, { ...item, frequency });
-                    } else {
-                        // 不重复
-                        isRepeat = true;
-                    }
-                });
-                if (isRepeat) $track(data);
-            } else {
-                $track(data);
-            }
-        });
+          const { siteid } = defaultInfoData;
+          $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, dbase => {
+              let dbaseMap = dbase.filter(item => item.eventId === '100098');
+              // 默认重复
+              let isRepeat = false;
+              if (dbaseMap && dbaseMap.length > 0) {
+                  dbaseMap.map(item => {
+                      if (item.eventId === '100098' && item.param && item.param.msg === msg) {
+                          // 重复了，并且更新
+                          let frequency = item.frequency ? item.frequency + 1 : 1;
+                          $updateDBbase(DATA_BASE_NAME, { ...item, frequency });
+                      } else {
+                          // 不重复
+                          isRepeat = true;
+                      }
+                  });
+                  if (isRepeat) $track(data);
+              } else {
+                  $track(data);
+              }
+          });
+        } catch (e) {}
     };
 };
 
@@ -503,26 +518,25 @@ const getStepPer = (time, per) => {
 };
 
 // 获取实时帧率
-export const $FPSEfficiency = (callback) => {
+export const $FPSEfficiency = callback => {
     let lastTime = performance.now();
-    let frame = 0;
-    let lastFameTime = performance.now();
-    let loop = (time) => {
-        let now =  performance.now();
-        let fs = (now - lastFameTime);
-        lastFameTime = now;
-        let fps = Math.round(1000/fs);
-        frame++;
-        if (now > 1000 + lastTime) {
-            let fps = Math.round( ( frame * 1000 ) / ( now - lastTime ) );
-            frame = 0;
-            lastTime = now;
+    let frameCount = 0,
+        elapsedTime = 0;
+    let loop = () => {
+        let nowTime = performance.now();
+        elapsedTime += nowTime - lastTime;
+        lastTime = nowTime;
+        frameCount++;
+        if (elapsedTime >= 1000) {
+            let fps = Math.round(frameCount / (elapsedTime * 0.001));
+            frameCount = 0;
+            elapsedTime = 0;
             callback(fps);
-        };
+        }
         window.requestAnimationFrame(loop);
-    }
+    };
     loop();
-}
+};
 
 /**
     压力测试: 给予电脑性能压力
@@ -543,25 +557,32 @@ export const $performancePressureTest = (pressure = 100) => {
         document.body.appendChild(div);
     }
 
-    let fanFlies = (function() {
-        return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function(callback) {
-            window.setTimeout(callback, 1000 / 60);
-        };
+    let fanFlies = (function () {
+        return (
+            window.requestAnimationFrame ||
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.oRequestAnimationFrame ||
+            window.msRequestAnimationFrame ||
+            function (callback) {
+                window.setTimeout(callback, 1000 / 60);
+            }
+        );
     })();
     let movers = document.querySelectorAll('.mover');
     (function init() {
         for (let m = 0; m < movers.length; m++) {
-            movers[m].style.top = (m * 20) + 'px';
+            movers[m].style.top = m * 20 + 'px';
         }
     })();
     function update(timestamp) {
         for (let m = 0; m < movers.length; m++) {
-            movers[m].style.left = ((Math.sin(movers[m].offsetTop + timestamp / 1000) + 1) * 500) + 'px';
+            movers[m].style.left = (Math.sin(movers[m].offsetTop + timestamp / 1000) + 1) * 500 + 'px';
         }
         fanFlies(update);
-    };
+    }
     fanFlies(update);
-}
+};
 
 /**
     获取请求时长
@@ -596,11 +617,11 @@ export const $interfaceDuration = (type = ['fetch'], interval = 60000, overtime 
                     } else {
                         cur.map(item => {
                             if (item.name === next.name && item.duration > next.duration) {
-                                item.duration = next.duration
-                                item.transferSize = next.transferSize
-                                item.count = item.count + 1
+                                item.duration = next.duration;
+                                item.transferSize = next.transferSize;
+                                item.count = item.count + 1;
                             }
-                        })
+                        });
                     }
                 }
                 return cur;
@@ -619,7 +640,7 @@ export const $interfaceDuration = (type = ['fetch'], interval = 60000, overtime 
                     }
                 });
             } else {
-                interfaceData = resource
+                interfaceData = resource;
             }
 
             interfaceCount++;
@@ -677,7 +698,7 @@ export const $interfaceDuration = (type = ['fetch'], interval = 60000, overtime 
         //     });
         // }
     }, interval);
-}
+};
 
 // 组件diff时长记录
 // let renderDurationData = [];
@@ -699,3 +720,40 @@ export const $interfaceDuration = (type = ['fetch'], interval = 60000, overtime 
 //     //     data: renderDurationData,
 //     // });
 // }
+
+export const $localstorageISExcess = (key, value) => {
+    try {
+        let size = 0;
+        let isCopies = false;
+        const max = 5120;
+        for (let item in window.localStorage) {
+            if (window.localStorage.hasOwnProperty(item)) {
+                // 判断存在复写情况
+                if (item === key) {
+                    size += value.length;
+                    isCopies = true;
+                } else {
+                    size += window.localStorage.getItem(item).length;
+                }
+            }
+        }
+        let valueLneth = isCopies ? 0 : value.length;
+        let bytes = parseInt(((size + valueLneth) / 1024).toFixed(2));
+        if (bytes >= max) {
+            moyuLog({
+                text: 'localStorage存储单元已超出限额...',
+                color: '#d16770',
+                data: `${bytes}KB`,
+            });
+            localStorage.removeItem(LOCAL_STORAGE_NAME);
+        } else {
+            window.localStorage.setItem(key, value);
+        }
+    } catch (e) {
+        moyuLog({
+            text: 'localStorage存储单元已超出限额...',
+            color: '#d16770',
+        });
+        localStorage.removeItem(LOCAL_STORAGE_NAME);
+    }
+}
