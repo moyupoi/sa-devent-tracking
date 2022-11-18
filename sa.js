@@ -358,73 +358,76 @@ const reportTemporaryData = () => {
 // 获取错误日志
 const collectErrLogReport = () => {
     window.onerror = (msg, url, line, col, error) => {
-        try {
-          let errorText = '';
-          if (error && error.stack) {
-              // 如果浏览器有堆栈信息，直接使用
-              errorText = error.stack.toString();
-          } else if (arguments.callee) {
-              // 尝试通过callee拿堆栈信息
-              let ext = [];
-              let fn = arguments.callee.caller;
-              // 这里只拿三层堆栈信息
-              let floor = 3;
-              while (fn && --floor > 0) {
-                  ext.push(fn.toString());
-                  if (fn === fn.caller) {
-                      // 如果有环
-                      break;
-                  }
-                  fn = fn.caller;
-              }
-              errorText = ext.join(',');
-          }
-          if (msg.indexOf("'")) {
-              msg = msg.replace(/'/g, '"');
-          }
-          if (errorText.indexOf("'")) {
-              errorText = errorText.replace(/'/g, '"');
-          }
-          const data = {
-              eventId: '100098',
-              system: saSystem,
-              ...defaultInfoData,
-              param: {
-                  msg,
-                  url,
-                  line,
-                  col,
-                  errorText,
-              },
-          };
-          moyuLog({
-              text: '埋点...发现一条崩溃错误...',
-              color: '#d16770',
-              data,
-          });
+        let errorText = '';
+        if (error && error.stack) {
+            try {
+                errorText = error.stack.toString();
+            } catch (e) {}
+        }
+        // if (error && error.stack) {
+        //     // 如果浏览器有堆栈信息，直接使用
+        //     errorText = error.stack.toString();
+        // } else if (arguments.callee) {
+        //     // 尝试通过callee拿堆栈信息
+        //     let ext = [];
+        //     let fn = arguments.callee.caller;
+        //     // 这里只拿三层堆栈信息
+        //     let floor = 3;
+        //     while (fn && --floor > 0) {
+        //         ext.push(fn.toString());
+        //         if (fn === fn.caller) {
+        //             // 如果有环
+        //             break;
+        //         }
+        //         fn = fn.caller;
+        //     }
+        //     errorText = ext.join(',');
+        // }
+        // if (msg.indexOf("'")) {
+        //     msg = msg.replace(/'/g, '"');
+        // }
+        // if (errorText.indexOf("'")) {
+        //     errorText = errorText.replace(/'/g, '"');
+        // }
+        const data = {
+            eventId: '100098',
+            system: saSystem,
+            ...defaultInfoData,
+            param: {
+                msg,
+                url,
+                line,
+                col,
+                errorText,
+            },
+        };
+        moyuLog({
+            text: '埋点...发现一条崩溃错误...',
+            color: '#d16770',
+            data,
+        });
 
-          const { siteid } = defaultInfoData;
-          $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, dbase => {
-              let dbaseMap = dbase.filter(item => item.eventId === '100098');
-              // 默认重复
-              let isRepeat = false;
-              if (dbaseMap && dbaseMap.length > 0) {
-                  dbaseMap.map(item => {
-                      if (item.eventId === '100098' && item.param && item.param.msg === msg) {
-                          // 重复了，并且更新
-                          let frequency = item.frequency ? item.frequency + 1 : 1;
-                          $updateDBbase(DATA_BASE_NAME, { ...item, frequency });
-                      } else {
-                          // 不重复
-                          isRepeat = true;
-                      }
-                  });
-                  if (isRepeat) $track(data);
-              } else {
-                  $track(data);
-              }
-          });
-        } catch (e) {}
+        const { siteid } = defaultInfoData;
+        $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, dbase => {
+            let dbaseMap = dbase.filter(item => item.eventId === '100098');
+            // 默认重复
+            let isRepeat = false;
+            if (dbaseMap && dbaseMap.length > 0) {
+                dbaseMap.map(item => {
+                    if (item.eventId === '100098' && item.param && item.param.msg === msg) {
+                        // 重复了，并且更新
+                        let frequency = item.frequency ? item.frequency + 1 : 1;
+                        $updateDBbase(DATA_BASE_NAME, { ...item, frequency });
+                    } else {
+                        // 不重复
+                        isRepeat = true;
+                    }
+                });
+                if (isRepeat) $track(data);
+            } else {
+                $track(data);
+            }
+        });
     };
 };
 
