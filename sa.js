@@ -54,6 +54,8 @@ export const $saInit = (url, reportEventParame, reportEvenExParams, interval = 1
                 color: '#04c160',
             });
         });
+
+        // window.addEventListener('error', (e) => {})
     }
 };
 
@@ -355,13 +357,28 @@ const reportTemporaryData = () => {
     }
 };
 
+// 过滤器
+const selectMatchItems = (lists, keyWords) => {
+    let resArr = [];
+    lists.filter(item => {
+        if (keyWords.indexOf(item) !== -1) {
+            resArr.push(item);
+        }
+    })
+    return resArr;
+}
+
 // 获取错误日志
 const collectErrLogReport = () => {
     window.onerror = (msg, url, line, col, error) => {
+        // 需要过滤的字符串组
+        const filterErrorArray = ['ResizeObserver loop limit exceeded'];
         let errorText = '';
         if (error && error.stack) {
             try {
                 errorText = error.stack.toString();
+                // 过滤掉不需要埋点的错误
+                if (errorText && errorText !== '' && selectMatchItems(filterErrorArray, errorText).length > 0) return
             } catch (e) {}
         }
         // if (error && error.stack) {
@@ -399,6 +416,7 @@ const collectErrLogReport = () => {
                 line,
                 col,
                 errorText,
+                frequency: 0,
             },
         };
         moyuLog({
@@ -406,30 +424,34 @@ const collectErrLogReport = () => {
             color: '#d16770',
             data,
         });
-
-        const { siteid } = defaultInfoData;
-        $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, dbase => {
-            let dbaseMap = dbase.filter(item => item.eventId === '100098');
-            // 默认重复
-            let isRepeat = false;
-            if (dbaseMap && dbaseMap.length > 0) {
-                dbaseMap.map(item => {
-                    if (item.eventId === '100098' && item.param && item.param.msg === msg) {
-                        // 重复了，并且更新
-                        let frequency = item.frequency ? item.frequency + 1 : 1;
-                        $updateDBbase(DATA_BASE_NAME, { ...item, frequency });
-                    } else {
-                        // 不重复
-                        isRepeat = true;
-                    }
-                });
-                if (isRepeat) $track(data);
-            } else {
-                $track(data);
-            }
-        });
+        // 记录错误
+        recordError(data, msg);
     };
 };
+
+const recordError = (data, msg) => {
+    const { siteid } = defaultInfoData;
+    $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, dbase => {
+        let dbaseMap = dbase.filter(item => item.eventId === '100098');
+        // 默认重复
+        let isRepeat = false;
+        if (dbaseMap && dbaseMap.length > 0) {
+            dbaseMap.map(item => {
+                if (item.eventId === '100098' && item.param && item.param.msg === msg) {
+                    // 重复了，并且更新
+                    item.param['frequency'] = item.param.frequency + 1;
+                    $updateDBbase(DATA_BASE_NAME, item);
+                } else {
+                    // 不重复
+                    isRepeat = true;
+                }
+            });
+            if (isRepeat) $track(data);
+        } else {
+            $track(data);
+        }
+    });
+}
 
 const clip = num => num.toString().replace(/(?<=\.\d{2}).*$/, '');
 
