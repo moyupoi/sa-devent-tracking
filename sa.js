@@ -617,7 +617,7 @@ export const $performancePressureTest = (pressure = 100) => {
 */
 let interfaceData = []; // 全局存储接口数据
 let interfaceCount = 0; // 超过计数限额则提交埋点数据倒indexDB
-export const $interfaceDuration = (type = ['fetch'], interval = 60000, overtime = 100, frequency = 10, callback) => {
+export const $interfaceDuration = (type = ['fetch'], interval = 60000, overtime = 100, frequency = 10, siteId = '', callback) => {
     customizeSetInterval(requestAnimationFrameID => {
         let resource = performance.getEntriesByType('resource');
         if (resource && resource.length > 0) {
@@ -625,11 +625,24 @@ export const $interfaceDuration = (type = ['fetch'], interval = 60000, overtime 
             resource = resource.reduce((cur, next) => {
                 // 当超时时间大于 overtime
                 if (next.duration > overtime && type.includes(next.initiatorType)) {
+                    // 对url做处理
+                    let urlName = '';
+                    if (next.name && next.name !== '') {
+                        // 如果存在?情况下，去掉?之后的内容
+                        if (next.name.indexOf('?') !== -1) {
+                            urlName = next.name.substring(24, next.name.indexOf('?'));
+                        // 如果存在siteId情况下，去掉siteId之后的内容
+                        } else if (next.name.indexOf(siteId) !== -1) {
+                            urlName = next.name.substring(24, next.name.indexOf('siteId'));
+                        } else {
+                            urlName = next.name.substring(24, next.name.length);
+                        }
+                    }
                     // 已经存在
-                    if (!obj[next.name]) {
-                        obj[next.name] = cur.push({
+                    if (!obj[urlName]) {
+                        obj[urlName] = cur.push({
                             // 资源的名称
-                            name: next.name,
+                            name: urlName,
                             // 资源加载耗时
                             duration: Math.round(next.duration),
                             // 资源大小
@@ -641,7 +654,7 @@ export const $interfaceDuration = (type = ['fetch'], interval = 60000, overtime 
                         });
                     } else {
                         cur.map(item => {
-                            if (item.name === next.name && item.duration > next.duration) {
+                            if (item.name === urlName && item.duration > next.duration) {
                                 item.duration = next.duration;
                                 item.transferSize = next.transferSize;
                                 item.count = item.count + 1;
