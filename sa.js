@@ -633,7 +633,7 @@ export const $interfaceDuration = (type = ['fetch'], interval = 60000, overtime 
                             urlName = next.name.substring(24, next.name.indexOf('?'));
                         // 如果存在siteId情况下，去掉siteId之后的内容
                         } else if (next.name.indexOf(siteId) !== -1) {
-                            urlName = next.name.substring(24, next.name.indexOf('siteId'));
+                            urlName = next.name.substring(24, next.name.indexOf(siteId));
                         } else {
                             urlName = next.name.substring(24, next.name.length);
                         }
