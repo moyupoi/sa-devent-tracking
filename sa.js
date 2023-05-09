@@ -20,6 +20,8 @@ let isSaSwitch = true;
 let reportEvent = [];
 //不上报事件
 let reportEvenEx = [];
+// 存储错误信息
+let errorData = [];
 
 /**
   外部调用函数
@@ -217,13 +219,20 @@ const initSetInterval = interval => {
     customizeSetInterval(requestAnimationFrameID => {
         const { siteid } = defaultInfoData;
         $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, data => {
-            if (data && data.length > 0) {
+            // 错误信息
+            let tempData = data;
+            if (errorData && errorData.length > 0) {
+                tempData = data.concat(errorData);
+                errorData = [];
+            }
+            // 埋点数据提交
+            if (tempData && tempData.length > 0) {
                 moyuLog({
                     text: '埋点...索引读取成功！',
                     color: '#04c160',
-                    data,
+                    tempData,
                 });
-                fetchEscalation(data, false);
+                fetchEscalation(tempData, false);
             }
         });
         // 判断临时数据中是否有值
@@ -378,34 +387,10 @@ const collectErrLogReport = () => {
             try {
                 errorText = error.stack.toString();
                 // 过滤掉不需要埋点的错误
-                if (errorText && errorText !== '' && selectMatchItems(filterErrorArray, errorText).length > 0) return
+                if (msg && msg !== '' && selectMatchItems(filterErrorArray, msg).length > 0) return
             } catch (e) {}
         }
-        // if (error && error.stack) {
-        //     // 如果浏览器有堆栈信息，直接使用
-        //     errorText = error.stack.toString();
-        // } else if (arguments.callee) {
-        //     // 尝试通过callee拿堆栈信息
-        //     let ext = [];
-        //     let fn = arguments.callee.caller;
-        //     // 这里只拿三层堆栈信息
-        //     let floor = 3;
-        //     while (fn && --floor > 0) {
-        //         ext.push(fn.toString());
-        //         if (fn === fn.caller) {
-        //             // 如果有环
-        //             break;
-        //         }
-        //         fn = fn.caller;
-        //     }
-        //     errorText = ext.join(',');
-        // }
-        // if (msg.indexOf("'")) {
-        //     msg = msg.replace(/'/g, '"');
-        // }
-        // if (errorText.indexOf("'")) {
-        //     errorText = errorText.replace(/'/g, '"');
-        // }
+
         const data = {
             eventId: '100098',
             system: saSystem,
@@ -418,12 +403,9 @@ const collectErrLogReport = () => {
                 errorText,
                 frequency: 0,
             },
+            timestamp: new Date().getTime(),
         };
-        moyuLog({
-            text: '埋点...发现一条崩溃错误...',
-            color: '#d16770',
-            data,
-        });
+
         // 记录错误
         recordError(data, msg);
     };
@@ -431,27 +413,46 @@ const collectErrLogReport = () => {
 
 const recordError = (data, msg) => {
     const { siteid } = defaultInfoData;
-    $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, dbase => {
-        let dbaseMap = dbase.filter(item => item.eventId === '100098');
-        // 默认重复
-        let isRepeat = false;
-        if (dbaseMap && dbaseMap.length > 0) {
-            dbaseMap.map(item => {
-                if (item.eventId === '100098' && item.param && item.param.msg === msg) {
-                    // 重复了，并且更新
-                    item.param['frequency'] = item.param.frequency + 1;
-                    $updateDBbase(DATA_BASE_NAME, item);
-                } else {
-                    // 不重复
-                    isRepeat = true;
-                }
-            });
-            if (isRepeat) $track(data);
-        } else {
-            $track(data);
-        }
+    if (errorData && errorData.length > 0) {
+        errorData.map(item => {
+            if (item.eventId === '100098' && item.param && item.param.msg === msg) {
+                // 重复了，并且更新
+                item.param['frequency'] = item.param.frequency + 1;
+            }
+        });
+    } else {
+        errorData.push(data);
+    }
+    moyuLog({
+        text: '埋点...发现一条崩溃错误...',
+        color: '#d16770',
+        data,
     });
 }
+
+// const recordError = (data, msg) => {
+//     const { siteid } = defaultInfoData;
+//     $readIndexDBbase(DATA_BASE_NAME, 'siteid', siteid, dbase => {
+//         let dbaseMap = dbase.filter(item => item.eventId === '100098');
+//         // 默认重复
+//         let isRepeat = false;
+//         if (dbaseMap && dbaseMap.length > 0) {
+//             dbaseMap.map(item => {
+//                 if (item.eventId === '100098' && item.param && item.param.msg === msg) {
+//                     // 重复了，并且更新
+//                     item.param['frequency'] = item.param.frequency + 1;
+//                     $updateDBbase(DATA_BASE_NAME, item);
+//                 } else {
+//                     // 不重复
+//                     isRepeat = true;
+//                 }
+//             });
+//             if (isRepeat) $track(data);
+//         } else {
+//             $track(data);
+//         }
+//     });
+// }
 
 const clip = num => num.toString().replace(/(?<=\.\d{2}).*$/, '');
 
