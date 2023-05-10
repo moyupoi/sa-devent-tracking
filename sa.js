@@ -70,38 +70,41 @@ export const $setDefaultInfo = params =>
 
 // 外部调用
 export const $track = event => {
-    /**
-        isSaSwitch: 判断是否能上报事件
-        isAllowReporting: 判断是否允许上报
-    */
-    if (isSaSwitch && isAllowReporting(event.eventId)) {
-        // 判断初始化默认数据中是否有值
-        if (defaultInfoData) {
-            const data = {
-                ...defaultInfoData,
-                ...event,
-                system: saSystem,
-                timestamp: new Date().getTime(),
-            };
-            $addDBbase(DATA_BASE_NAME, data).then(res => {
-                if (res) {
-                    moyuLog({
-                        text: '埋点...事件埋点成功!',
-                        color: '#04c160',
-                        data,
-                    });
-                } else {
-                    moyuLog({
-                        text: '埋点...事件埋点失败...',
-                        color: '#d16770',
-                    });
-                }
-            });
-        } else {
-            // 如果没有默认值，则把数据存到临时Storage中
-            setTemporaryStorage(event);
+    try {
+        /**
+            isSaSwitch: 判断是否能上报事件
+            isAllowReporting: 判断是否允许上报
+        */
+        if (isSaSwitch && isAllowReporting(event.eventId)) {
+            // 判断初始化默认数据中是否有值
+            if (defaultInfoData) {
+                const data = {
+                    ...defaultInfoData,
+                    ...event,
+                    system: saSystem,
+                    timestamp: new Date().getTime(),
+                };
+                $addDBbase(DATA_BASE_NAME, data).then(res => {
+                    debugger
+                    if (res) {
+                        moyuLog({
+                            text: '埋点...事件埋点成功!',
+                            color: '#04c160',
+                            data,
+                        });
+                    } else {
+                        moyuLog({
+                            text: '埋点...事件埋点失败...',
+                            color: '#d16770',
+                        });
+                    }
+                });
+            } else {
+                // 如果没有默认值，则把数据存到临时Storage中
+                setTemporaryStorage(event);
+            }
         }
-    }
+    } catch (e) {}
 };
 
 // 事件埋点: 页面加载的性能指标
