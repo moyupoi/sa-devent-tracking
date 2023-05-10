@@ -85,7 +85,6 @@ export const $track = event => {
                     timestamp: new Date().getTime(),
                 };
                 $addDBbase(DATA_BASE_NAME, data).then(res => {
-                    debugger
                     if (res) {
                         moyuLog({
                             text: '埋点...事件埋点成功!',
