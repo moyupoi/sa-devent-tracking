@@ -423,11 +423,6 @@ const recordError = (data, msg) => {
     } else {
         errorData.push(data);
     }
-    moyuLog({
-        text: '埋点...发现一条崩溃错误...',
-        color: '#d16770',
-        data,
-    });
 }
 
 // const recordError = (data, msg) => {
