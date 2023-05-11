@@ -385,13 +385,16 @@ const collectErrLogReport = () => {
         // 需要过滤的字符串组
         const filterErrorArray = ['ResizeObserver loop limit exceeded'];
         let errorText = '';
+
         if (error && error.stack) {
             try {
                 errorText = error.stack.toString();
-                // 过滤掉不需要埋点的错误
-                if (msg && msg !== '' && selectMatchItems(filterErrorArray, msg).length > 0) return
             } catch (e) {}
         }
+        try {
+            // 过滤掉不需要埋点的错误
+            if (msg && msg !== '' && selectMatchItems(filterErrorArray, msg).length > 0) return
+        } catch (e) {}
 
         const data = {
             eventId: '100098',
@@ -425,6 +428,11 @@ const recordError = (data, msg) => {
     } else {
         errorData.push(data);
     }
+    // moyuLog({
+    //     text: '埋点...发现一条崩溃错误...',
+    //     color: '#d16770',
+    //     data,
+    // });
 }
 
 // const recordError = (data, msg) => {
