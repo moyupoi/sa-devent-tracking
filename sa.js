@@ -477,7 +477,7 @@ const getUA = () => {
 const isAllowReporting = eventId => {
     let result = true;
     // 允许上报事件
-    if (reportEvent && reportEvent.length > 0 && reportEvent.filter(item => item !== eventId).length > 0) {
+    if (reportEvent && reportEvent.length > 0 && reportEvent.indexOf(eventId) !== -1) {
         result = false;
     }
 
